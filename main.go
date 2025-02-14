@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/Dballzall/links-short/handler"
 	"github.com/Dballzall/links-short/store"
@@ -31,8 +32,13 @@ func main() {
 	// Initialize the URL store (e.g., connect to Redis)
 	store.InitializeStore()
 
-	// Start the server on port 9808
-	err := r.Run(":9808")
+	// Use the PORT environment variable or default to 9808
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "9808"
+	}
+
+	err := r.Run(":" + port)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to start the web server - Error: %v", err))
 	}

@@ -3,15 +3,32 @@ version: '3.8'
 services:
   app:
     build: .
-    image: go-url-shortener
     ports:
       - "9808:9808"
     depends_on:
-      - redis
+      mysql:
+        condition: service_healthy
     environment:
-      - REDIS_HOST=redis
+      - MYSQL_HOST=mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=your_password
+      - MYSQL_DATABASE=url_shortener
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
 
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
+  mysql:
+    image: mysql:8.0
+    environment:
+      - MYSQL_ROOT_PASSWORD=your_password
+      - MYSQL_DATABASE=url_shortener
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:
