@@ -4,6 +4,7 @@ go 1.23
 
 require (
 	github.com/gin-gonic/gin v1.10.0
+	github.com/itchyny/base58-go v0.2.2
 	github.com/stretchr/testify v1.10.0
 )
 
