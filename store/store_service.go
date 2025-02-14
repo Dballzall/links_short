@@ -52,13 +52,12 @@ func SaveUrlMapping(shortUrl string, originalUrl string, userId string) {
 }
 
 /*
-RetrieveInitialUrl retrieves the original URL based on the short URL.
-If the key is not found or any error occurs, it panics.
+RetrieveInitialUrl retrieves the original URL based on the short URL
 */
-func RetrieveInitialUrl(shortUrl string) string {
+func RetrieveInitialUrl(shortUrl string) (string, error) {
 	result, err := storeService.redisClient.Get(ctx, shortUrl).Result()
 	if err != nil {
-		panic(fmt.Sprintf("Failed retrieving initial URL | Error: %v - shortUrl: %s\n", err, shortUrl))
+		return "", err
 	}
-	return result
+	return result, nil
 }
