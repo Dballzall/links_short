@@ -1,51 +1,67 @@
 package store
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	_ "github.com/go-sql-driver/mysql"
 )
 
-// StorageService wraps the Redis client
+// StorageService wraps the MySQL connection
 type StorageService struct {
-	redisClient *redis.Client
+	db *sql.DB
 }
 
-// Global declarations: our store service instance and Redis context
+// Global declarations: our store service instance
 var (
 	storeService = &StorageService{}
-	ctx          = context.Background()
 )
 
-// CacheDuration specifies the expiration time for cache entries
-const CacheDuration = 6 * time.Hour
-
-// InitializeStore sets up the Redis client and returns the store service pointer.
+// InitializeStore sets up the MySQL connection and returns the store service pointer
 func InitializeStore() *StorageService {
-	// Get Redis host from the environment variable; default to "localhost" if not set.
-	redisHost := os.Getenv("REDIS_HOST")
-	if redisHost == "" {
-		redisHost = "localhost"
+	// Get MySQL connection details from environment variables
+	mysqlHost := os.Getenv("MYSQL_HOST")
+	mysqlUser := os.Getenv("MYSQL_USER")
+	mysqlPass := os.Getenv("MYSQL_PASSWORD")
+	mysqlDB := os.Getenv("MYSQL_DATABASE")
+
+	if mysqlHost == "" {
+		mysqlHost = "localhost"
 	}
-	redisAddr := fmt.Sprintf("%s:6379", redisHost)
+	if mysqlUser == "" {
+		mysqlUser = "root"
+	}
+	if mysqlDB == "" {
+		mysqlDB = "url_shortener"
+	}
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     redisAddr, // Redis address using the provided host
-		Password: "",        // no password set
-		DB:       0,         // use default DB
-	})
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:3306)/%s?parseTime=true",
+		mysqlUser,
+		mysqlPass,
+		mysqlHost,
+		mysqlDB,
+	)
 
-	// Test connection to Redis
-	pong, err := redisClient.Ping(ctx).Result()
+	db, err := sql.Open("mysql", dsn)
 	if err != nil {
-		panic(fmt.Sprintf("Error initializing Redis: %v", err))
+		panic(fmt.Sprintf("Error connecting to MySQL: %v", err))
 	}
 
-	fmt.Printf("\nRedis started successfully: pong message = {%s} (Connected to %s)\n", pong, redisAddr)
-	storeService.redisClient = redisClient
+	// Test the connection
+	err = db.Ping()
+	if err != nil {
+		panic(fmt.Sprintf("Error connecting to MySQL: %v", err))
+	}
+
+	// Set connection pool settings
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(25)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	storeService.db = db
+	fmt.Printf("Connected to MySQL at %s\n", mysqlHost)
 	return storeService
 }
 
@@ -54,9 +70,18 @@ SaveUrlMapping persists the mapping between the short URL and the original URL.
 The userId is passed here but not used in this simple example.
 */
 func SaveUrlMapping(shortUrl string, originalUrl string, userId string) {
-	err := storeService.redisClient.Set(ctx, shortUrl, originalUrl, CacheDuration).Err()
+	stmt, err := storeService.db.Prepare(`
+		INSERT INTO url_mappings (short_url, original_url, user_id) 
+		VALUES (?, ?, ?)
+	`)
 	if err != nil {
-		panic(fmt.Sprintf("Failed saving key URL | Error: %v - shortUrl: %s - originalUrl: %s\n", err, shortUrl, originalUrl))
+		panic(fmt.Sprintf("Failed to prepare statement: %v", err))
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(shortUrl, originalUrl, userId)
+	if err != nil {
+		panic(fmt.Sprintf("Failed saving URL mapping: %v", err))
 	}
 }
 
@@ -64,9 +89,18 @@ func SaveUrlMapping(shortUrl string, originalUrl string, userId string) {
 RetrieveInitialUrl retrieves the original URL based on the short URL
 */
 func RetrieveInitialUrl(shortUrl string) (string, error) {
-	result, err := storeService.redisClient.Get(ctx, shortUrl).Result()
+	var originalUrl string
+	err := storeService.db.QueryRow(
+		"SELECT original_url FROM url_mappings WHERE short_url = ?",
+		shortUrl,
+	).Scan(&originalUrl)
+
+	if err == sql.ErrNoRows {
+		return "", fmt.Errorf("short URL not found")
+	}
 	if err != nil {
 		return "", err
 	}
-	return result, nil
+
+	return originalUrl, nil
 }

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,13 +10,26 @@ import (
 // Initialize a test instance of the storage service.
 var testStoreService = &StorageService{}
 
-func init() {
+func TestMain(m *testing.M) {
+	// Set test environment variables
+	os.Setenv("MYSQL_HOST", "localhost")
+	os.Setenv("MYSQL_USER", "root")
+	os.Setenv("MYSQL_PASSWORD", "your_password")
+	os.Setenv("MYSQL_DATABASE", "url_shortener")
+
 	testStoreService = InitializeStore()
+	code := m.Run()
+
+	// Clean up test data
+	testStoreService.db.Exec("DELETE FROM url_mappings WHERE user_id = ?",
+		"e0dba740-fc4b-4977-872c-d360239e6b1a")
+
+	os.Exit(code)
 }
 
-// TestStoreInit verifies that the Redis client was properly initialized.
+// TestStoreInit verifies that the MySQL connection was properly initialized.
 func TestStoreInit(t *testing.T) {
-	assert.NotNil(t, testStoreService.redisClient, "Redis client should not be nil")
+	assert.NotNil(t, testStoreService.db, "Database connection should not be nil")
 }
 
 // TestInsertionAndRetrieval tests the full round-trip:
