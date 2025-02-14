@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    image: go-url-shortener
+    ports:
+      - "9808:9808"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"

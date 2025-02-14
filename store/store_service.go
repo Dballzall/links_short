@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -24,18 +25,26 @@ const CacheDuration = 6 * time.Hour
 
 // InitializeStore sets up the Redis client and returns the store service pointer.
 func InitializeStore() *StorageService {
+	// Get Redis host from the environment variable; default to "localhost" if not set.
+	redisHost := os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		redisHost = "localhost"
+	}
+	redisAddr := fmt.Sprintf("%s:6379", redisHost)
+
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // default Redis address
-		Password: "",               // no password set
-		DB:       0,                // use default DB
+		Addr:     redisAddr, // Redis address using the provided host
+		Password: "",        // no password set
+		DB:       0,         // use default DB
 	})
 
+	// Test connection to Redis
 	pong, err := redisClient.Ping(ctx).Result()
 	if err != nil {
 		panic(fmt.Sprintf("Error initializing Redis: %v", err))
 	}
 
-	fmt.Printf("\nRedis started successfully: pong message = {%s}\n", pong)
+	fmt.Printf("\nRedis started successfully: pong message = {%s} (Connected to %s)\n", pong, redisAddr)
 	storeService.redisClient = redisClient
 	return storeService
 }
