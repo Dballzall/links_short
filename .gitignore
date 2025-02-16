@@ -1,0 +1,7 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Database
+mysql_data/ 

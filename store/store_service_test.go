@@ -14,7 +14,7 @@ func TestMain(m *testing.M) {
 	// Set test environment variables
 	os.Setenv("MYSQL_HOST", "localhost")
 	os.Setenv("MYSQL_USER", "root")
-	os.Setenv("MYSQL_PASSWORD", "your_password")
+	os.Setenv("MYSQL_PASSWORD", os.Getenv("MYSQL_TEST_PASSWORD"))
 	os.Setenv("MYSQL_DATABASE", "url_shortener")
 
 	testStoreService = InitializeStore()
