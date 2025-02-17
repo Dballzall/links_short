@@ -11,7 +11,7 @@ services:
     environment:
       - MYSQL_HOST=mysql
       - MYSQL_USER=root
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_PASSWORD=your_root_password
       - MYSQL_DATABASE=url_shortener
     volumes:
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
@@ -19,8 +19,7 @@ services:
   mysql:
     image: mysql:8.0
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=your_root_password
       - MYSQL_DATABASE=url_shortener
     volumes:
       - mysql_data:/var/lib/mysql
@@ -37,8 +36,6 @@ services:
       - "8080:8080"
     depends_on:
       - mysql
-    environment:
-      - ADMINER_DEFAULT_SERVER=mysql
 
 volumes:
   mysql_data:

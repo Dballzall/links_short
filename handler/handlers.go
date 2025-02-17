@@ -76,3 +76,14 @@ func GetUrlClickStats(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, stats)
 }
+
+// Add this new handler
+func GetUrlInfo(c *gin.Context) {
+	shortUrl := c.Param("shortUrl")
+	urlInfo, err := store.GetUrlInfo(shortUrl)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, urlInfo)
+}

@@ -178,3 +178,28 @@ func GetClickStats(shortUrl string) (map[string]int, error) {
 
 	return stats, nil
 }
+
+// GetUrlInfo returns URL information based on the short URL
+func GetUrlInfo(shortUrl string) (struct {
+	ShortUrl  string    `json:"short_url"`
+	CreatedAt time.Time `json:"created_at"`
+}, error) {
+	var urlInfo struct {
+		ShortUrl  string    `json:"short_url"`
+		CreatedAt time.Time `json:"created_at"`
+	}
+
+	err := storeService.db.QueryRow(
+		"SELECT short_url, created_at FROM url_mappings WHERE short_url = ?",
+		shortUrl,
+	).Scan(&urlInfo.ShortUrl, &urlInfo.CreatedAt)
+
+	if err == sql.ErrNoRows {
+		return urlInfo, fmt.Errorf("short URL not found")
+	}
+	if err != nil {
+		return urlInfo, err
+	}
+
+	return urlInfo, nil
+}

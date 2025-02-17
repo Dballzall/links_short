@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QuickLink - URL Shortener</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -180,13 +181,59 @@
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
-            width: 400px;
+            width: 600px;
+            max-height: 80vh;
             padding: 25px;
             background: white;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             z-index: 101;
             display: none;
+            overflow-y: auto;
+        }
+
+        .clicks-list {
+            margin-top: 15px;
+        }
+
+        .click-day {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .click-date {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .click-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+
+        .total-clicks {
+            text-align: center;
+            font-size: 1.4em;
+            color: #333;
+            margin: 15px 0 25px 0;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .total-number {
+            font-size: 2em;
+            color: #667eea;
+            font-weight: 600;
+            display: block;
+            margin-top: 5px;
         }
 
         .stats-header {
@@ -217,45 +264,16 @@
             transform: none;
         }
 
-        .total-clicks {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
-            margin-top: 10px;
-        }
-
-        .calendar-day {
-            aspect-ratio: 1;
-            background: #eee;
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.8em;
-            position: relative;
-        }
-
-        .calendar-day[data-clicks="0"] { background: #eee; }
-        .calendar-day[data-clicks="1"] { background: #d1e7dd; }
-        .calendar-day[data-clicks="2"] { background: #a3cfbb; }
-        .calendar-day[data-clicks="3"] { background: #75b798; }
-        .calendar-day[data-clicks="4"] { background: #479f76; }
-        .calendar-day[data-clicks="5"] { background: #198754; }
-
-        .stats-toggle {
-            margin-top: 10px;
+        .chart-container {
+            margin-top: 20px;
+            height: 300px;
+            width: 100%;
         }
 
         @media (max-width: 768px) {
             .click-stats {
-                width: 90%;
-                max-width: 400px;
+                width: 95%;
+                max-width: 600px;
             }
         }
     </style>
@@ -380,35 +398,145 @@
             resultDiv.innerHTML = message;
         }
 
-        // Update the toggleStats function
+        // Replace the getDatesRange function with this version
+        function getDatesRange(createdAt) {
+            const dates = [];
+            const startDate = new Date(createdAt);
+            startDate.setHours(0, 0, 0, 0);  // Start at beginning of creation day
+            
+            // Generate dates from creation date to 5 days in the future
+            for (let i = 0; i <= 5; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                dates.push(date);
+            }
+            return dates;
+        }
+
+        // Then update the chart creation part in toggleStats:
         async function toggleStats(shortUrl, statsDiv) {
             const overlay = document.querySelector('.overlay');
             const statsContent = statsDiv.querySelector('.stats-content');
             
             if (statsDiv.style.display === 'none') {
                 try {
-                    const response = await fetch(`/stats/${shortUrl}`);
-                    const stats = await response.json();
+                    // Get both stats and URL details
+                    const [statsResponse, urlResponse] = await Promise.all([
+                        fetch(`/stats/${shortUrl}`),
+                        fetch(`/url-info/${shortUrl}`)  // You'll need to create this endpoint
+                    ]);
+                    
+                    const stats = await statsResponse.json();
+                    const urlInfo = await urlResponse.json();
                     
                     const total = Object.values(stats).reduce((a, b) => a + b, 0);
                     
-                    const days = Object.entries(stats).map(([date, clicks]) => ({
-                        date: new Date(date),
-                        clicks
-                    })).sort((a, b) => b.date - a.date);
+                    // Create sorted array of dates and clicks
+                    const days = Object.entries(stats)
+                        .map(([date, clicks]) => ({
+                            date: new Date(date),
+                            clicks
+                        }))
+                        .sort((a, b) => a.date - b.date);
 
                     statsContent.innerHTML = `
-                        <div class="total-clicks">Total Clicks: ${total}</div>
-                        <div class="calendar-grid">
-                            ${days.map(day => `
-                                <div class="calendar-day" 
-                                     data-clicks="${Math.min(5, day.clicks)}" 
-                                     title="${day.date.toLocaleDateString()}: ${day.clicks} clicks">
-                                    ${day.clicks}
-                                </div>
-                            `).join('')}
+                        <div class="total-clicks">
+                            Total Clicks
+                            <span class="total-number">${total}</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="clicksChart"></canvas>
                         </div>
                     `;
+
+                    const ctx = document.getElementById('clicksChart').getContext('2d');
+                    
+                    // Get date range starting from creation date
+                    const dateRange = getDatesRange(urlInfo.created_at);
+                    
+                    // Create a map of existing clicks
+                    const clicksMap = new Map(days.map(day => [
+                        day.date.toISOString().split('T')[0], 
+                        day.clicks
+                    ]));
+
+                    // Create the full dataset including future dates
+                    const fullDataset = dateRange.map(date => ({
+                        date,
+                        clicks: clicksMap.get(date.toISOString().split('T')[0]) || 0
+                    }));
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: fullDataset.map(day => day.date.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric'
+                            })),
+                            datasets: [{
+                                label: 'Clicks',
+                                data: fullDataset.map(day => day.clicks),
+                                backgroundColor: fullDataset.map(day => {
+                                    // Use different color for future dates
+                                    return day.date > new Date() ? 'rgba(102, 126, 234, 0.2)' : '#667eea';
+                                }),
+                                borderRadius: 6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => {
+                                            const index = items[0].dataIndex;
+                                            return fullDataset[index].date.toLocaleDateString('en-US', {
+                                                weekday: 'long',
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            });
+                                        },
+                                        label: (item) => {
+                                            const index = item.dataIndex;
+                                            const isFuture = fullDataset[index].date > new Date();
+                                            if (isFuture) {
+                                                return 'Future date';
+                                            }
+                                            return `${item.raw} click${item.raw === 1 ? '' : 's'}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        stepSize: 1,
+                                        precision: 0
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Number of Clicks'
+                                    }
+                                },
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Date'
+                                    },
+                                    ticks: {
+                                        maxRotation: 45,
+                                        minRotation: 45
+                                    }
+                                }
+                            }
+                        }
+                    });
                     
                     overlay.style.display = 'block';
                     statsDiv.style.display = 'block';

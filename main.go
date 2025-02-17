@@ -40,6 +40,11 @@ func main() {
 		handler.GetUrlClickStats(c)
 	})
 
+	// Endpoint to get URL information
+	r.GET("/url-info/:shortUrl", func(c *gin.Context) {
+		handler.GetUrlInfo(c)
+	})
+
 	// Initialize the URL store (e.g., connect to Redis)
 	store.InitializeStore()
 
