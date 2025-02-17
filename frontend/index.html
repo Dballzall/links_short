@@ -127,11 +127,11 @@
             border-radius: 10px;
             margin-bottom: 15px;
             transition: transform 0.2s;
-            position: relative;
         }
 
-        .url-item:hover {
-            transform: translateY(-2px);
+        .url-item .button-group {
+            margin-top: 15px;
+            justify-content: flex-start;
         }
 
         .url-item:last-child {
@@ -276,6 +276,34 @@
                 max-width: 600px;
             }
         }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-button {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+
+        .action-button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -294,8 +322,16 @@
         </div>
 
         <div class="recent-urls">
-            <h2>Recently Shortened</h2>
-            <div id="recentUrls"></div>
+            <div class="header-actions">
+                <h2>Recently Shortened</h2>
+            </div>
+            <div id="recentUrlsList"></div>
+            
+            <div id="statistics" style="display: none;">
+                <h3>Click Statistics</h3>
+                <canvas id="clickChart"></canvas>
+                <button onclick="hideStatistics()" class="action-button">Back</button>
+            </div>
         </div>
     </div>
 
@@ -317,8 +353,8 @@
                 const response = await fetch('/recent');
                 const urls = await response.json();
                 
-                const recentUrlsDiv = document.getElementById('recentUrls');
-                recentUrlsDiv.innerHTML = urls.map(url => `
+                const recentUrlsList = document.getElementById('recentUrlsList');
+                recentUrlsList.innerHTML = urls.map(url => `
                     <div class="url-item">
                         <div>
                             <strong>Original:</strong> 
@@ -329,9 +365,10 @@
                             <a href="/${url.short_url}" target="_blank">${window.location.origin}/${url.short_url}</a>
                         </div>
                         <div class="timestamp">Created: ${new Date(url.created_at).toLocaleString()}</div>
-                        <button class="stats-toggle" onclick="toggleStats('${url.short_url}', document.querySelector('.click-stats'))">
-                            📊 View Statistics
-                        </button>
+                        <div class="button-group">
+                            <button onclick="toggleStats('${url.short_url}', document.querySelector('.click-stats'))" class="action-button">View Statistics</button>
+                            <button onclick="clearUrlItem(this)" class="action-button">Clear</button>
+                        </div>
                     </div>
                 `).join('');
             } catch (error) {
@@ -561,6 +598,18 @@
                 closeStats();
             }
         });
+
+        // Add this new function
+        function clearRecentUrls() {
+            const recentUrlsList = document.getElementById('recentUrlsList');
+            recentUrlsList.innerHTML = ''; // Clear the list
+        }
+
+        // Add this new function to clear individual URL items
+        function clearUrlItem(button) {
+            const urlItem = button.closest('.url-item');
+            urlItem.remove();
+        }
     </script>
 </body>
 </html> 
