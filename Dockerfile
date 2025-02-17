@@ -26,6 +26,9 @@ WORKDIR /root/
 # Copy the binary from the build stage
 COPY --from=builder /app/main .
 
+# Copy the frontend files
+COPY --from=builder /app/frontend ./frontend
+
 # Expose the port the application runs on
 EXPOSE 9808
 

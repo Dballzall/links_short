@@ -12,11 +12,12 @@ import (
 func main() {
 	r := gin.Default()
 
-	// Home endpoint
+	// Serve static files from the "frontend" directory
+	r.Static("/frontend", "./frontend")
+
+	// Serve the index.html file at the root path
 	r.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "Welcome to the URL Shortener API",
-		})
+		c.File("./frontend/index.html")
 	})
 
 	// Endpoint to create a short URL

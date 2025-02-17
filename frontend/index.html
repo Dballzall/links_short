@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Shortener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>URL Shortener</h1>
+        <div class="input-group">
+            <input type="text" id="longUrl" placeholder="Enter your long URL here">
+            <button onclick="shortenUrl()">Shorten URL</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function shortenUrl() {
+            const longUrl = document.getElementById('longUrl').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!longUrl) {
+                showError('Please enter a URL');
+                return;
+            }
+
+            try {
+                const response = await fetch('/create-short-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        long_url: longUrl,
+                        user_id: 'frontend-user' // Using a default user ID
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const shortUrl = `${window.location.origin}/${data.short_url}`;
+                    showSuccess(`
+                        Short URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a>
+                    `);
+                } else {
+                    showError(data.error || 'Failed to shorten URL');
+                }
+            } catch (error) {
+                showError('An error occurred while shortening the URL');
+            }
+        }
+
+        function showSuccess(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'success';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = message;
+        }
+
+        function showError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'error';
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = message;
+        }
+    </script>
+</body>
+</html> 
