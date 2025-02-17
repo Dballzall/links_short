@@ -50,6 +50,9 @@ func HandleShortUrlRedirect(c *gin.Context) {
 		return
 	}
 
+	// Record the click
+	store.RecordClick(shortUrl)
+
 	c.Redirect(http.StatusMovedPermanently, initialUrl)
 }
 
@@ -61,4 +64,15 @@ func GetRecentUrls(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, urls)
+}
+
+// Add new handler for click statistics
+func GetUrlClickStats(c *gin.Context) {
+	shortUrl := c.Param("shortUrl")
+	stats, err := store.GetClickStats(shortUrl)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, stats)
 }

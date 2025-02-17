@@ -140,3 +140,41 @@ func GetRecentUrls(limit int) ([]struct {
 
 	return urls, nil
 }
+
+// RecordClick records when a URL is clicked
+func RecordClick(shortUrl string) error {
+	_, err := storeService.db.Exec(`
+		INSERT INTO url_clicks (short_url) 
+		VALUES (?)
+	`, shortUrl)
+	return err
+}
+
+// GetClickStats returns click statistics for a URL
+func GetClickStats(shortUrl string) (map[string]int, error) {
+	stats := make(map[string]int)
+
+	rows, err := storeService.db.Query(`
+		SELECT DATE(clicked_at) as click_date, COUNT(*) as click_count
+		FROM url_clicks
+		WHERE short_url = ?
+		GROUP BY DATE(clicked_at)
+		ORDER BY click_date DESC
+		LIMIT 30
+	`, shortUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var clickDate string
+		var clickCount int
+		if err := rows.Scan(&clickDate, &clickCount); err != nil {
+			return nil, err
+		}
+		stats[clickDate] = clickCount
+	}
+
+	return stats, nil
+}

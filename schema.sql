@@ -11,4 +11,12 @@ CREATE TABLE IF NOT EXISTS url_mappings (
     user_id VARCHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_short_url (short_url)
+);
+
+-- Add this to your schema.sql
+CREATE TABLE IF NOT EXISTS url_clicks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    short_url VARCHAR(10) NOT NULL,
+    clicked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (short_url) REFERENCES url_mappings(short_url)
 ); 

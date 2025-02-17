@@ -35,6 +35,11 @@ func main() {
 		handler.GetRecentUrls(c)
 	})
 
+	// Endpoint to get click statistics
+	r.GET("/stats/:shortUrl", func(c *gin.Context) {
+		handler.GetUrlClickStats(c)
+	})
+
 	// Initialize the URL store (e.g., connect to Redis)
 	store.InitializeStore()
 
