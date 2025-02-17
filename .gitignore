@@ -4,4 +4,14 @@
 !.env.example
 
 # Database
-mysql_data/ 
+mysql_data/
+
+# IDE files
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Binary files
+/main 
