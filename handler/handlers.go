@@ -52,3 +52,13 @@ func HandleShortUrlRedirect(c *gin.Context) {
 
 	c.Redirect(http.StatusMovedPermanently, initialUrl)
 }
+
+// GetRecentUrls handles the retrieval of recent URLs
+func GetRecentUrls(c *gin.Context) {
+	urls, err := store.GetRecentUrls(5) // Get last 5 URLs
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, urls)
+}

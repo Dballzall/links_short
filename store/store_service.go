@@ -104,3 +104,39 @@ func RetrieveInitialUrl(shortUrl string) (string, error) {
 
 	return originalUrl, nil
 }
+
+func GetRecentUrls(limit int) ([]struct {
+	ShortUrl    string    `json:"short_url"`
+	OriginalUrl string    `json:"original_url"`
+	CreatedAt   time.Time `json:"created_at"`
+}, error) {
+	var urls []struct {
+		ShortUrl    string    `json:"short_url"`
+		OriginalUrl string    `json:"original_url"`
+		CreatedAt   time.Time `json:"created_at"`
+	}
+
+	rows, err := storeService.db.Query(`
+		SELECT short_url, original_url, created_at 
+		FROM url_mappings 
+		ORDER BY created_at DESC 
+		LIMIT ?`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var url struct {
+			ShortUrl    string    `json:"short_url"`
+			OriginalUrl string    `json:"original_url"`
+			CreatedAt   time.Time `json:"created_at"`
+		}
+		if err := rows.Scan(&url.ShortUrl, &url.OriginalUrl, &url.CreatedAt); err != nil {
+			return nil, err
+		}
+		urls = append(urls, url)
+	}
+
+	return urls, nil
+}

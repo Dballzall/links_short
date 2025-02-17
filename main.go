@@ -30,6 +30,11 @@ func main() {
 		handler.HandleShortUrlRedirect(c)
 	})
 
+	// Endpoint to get recent URLs
+	r.GET("/recent", func(c *gin.Context) {
+		handler.GetRecentUrls(c)
+	})
+
 	// Initialize the URL store (e.g., connect to Redis)
 	store.InitializeStore()
 

@@ -56,6 +56,33 @@
             border-color: #f5c6cb;
             color: #721c24;
         }
+        .recent-urls {
+            margin-top: 30px;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .recent-urls h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .url-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .url-item:last-child {
+            border-bottom: none;
+        }
+        .url-item a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .url-item a:hover {
+            text-decoration: underline;
+        }
+        .url-item .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -66,9 +93,39 @@
             <button onclick="shortenUrl()">Shorten URL</button>
         </div>
         <div id="result"></div>
+
+        <div class="recent-urls">
+            <h2>Recent Shortened URLs</h2>
+            <div id="recentUrls"></div>
+        </div>
     </div>
 
     <script>
+        // Load recent URLs when page loads
+        document.addEventListener('DOMContentLoaded', loadRecentUrls);
+
+        async function loadRecentUrls() {
+            try {
+                const response = await fetch('/recent');
+                const urls = await response.json();
+                
+                const recentUrlsDiv = document.getElementById('recentUrls');
+                recentUrlsDiv.innerHTML = urls.map(url => `
+                    <div class="url-item">
+                        <div>Original: <a href="${url.original_url}" target="_blank">${truncateUrl(url.original_url)}</a></div>
+                        <div>Short: <a href="/${url.short_url}" target="_blank">${window.location.origin}/${url.short_url}</a></div>
+                        <div class="timestamp">Created: ${new Date(url.created_at).toLocaleString()}</div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading recent URLs:', error);
+            }
+        }
+
+        function truncateUrl(url) {
+            return url.length > 50 ? url.substring(0, 47) + '...' : url;
+        }
+
         async function shortenUrl() {
             const longUrl = document.getElementById('longUrl').value;
             const resultDiv = document.getElementById('result');
@@ -86,7 +143,7 @@
                     },
                     body: JSON.stringify({
                         long_url: longUrl,
-                        user_id: 'frontend-user' // Using a default user ID
+                        user_id: 'frontend-user'
                     })
                 });
 
@@ -97,6 +154,8 @@
                     showSuccess(`
                         Short URL: <a href="${shortUrl}" target="_blank">${shortUrl}</a>
                     `);
+                    // Reload recent URLs after creating a new one
+                    loadRecentUrls();
                 } else {
                     showError(data.error || 'Failed to shorten URL');
                 }
